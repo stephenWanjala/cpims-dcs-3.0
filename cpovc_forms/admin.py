@@ -1,11 +1,16 @@
 import csv
 import time
+
+from cffi.backend_ctypes import xrange
 from django.contrib import admin
 from django.http import HttpResponse
+from freetype import unicode
+from openpyxl.workbook import Workbook
+
 from .models import (
     OVCCaseGeo, OVCCaseCategory, OVCBasicCRS, OVCBasicPerson, OVCBasicCategory,
     OVCPlacement, OVCDischargeFollowUp, OVCCaseRecord, OVCCaseLoadView,
-    OVCCaseEvents, OVCCaseLocation, OvcCaseInformation)
+    OVCCaseEvents, OvcCaseInformation)
 
 
 def dump_to_csv(modeladmin, request, qs):
@@ -84,13 +89,13 @@ export_xls.short_description = u"Export XLS"
 
 def export_xlsx(modeladmin, request, queryset):
     """Export as xlsx."""
-    import openpyxl
-    from openpyxl.cell import get_column_letter
+    # from openpyxl.cell import get_column_letter
+    from openpyxl.utils import get_column_letter
     fmt = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     response = HttpResponse(content_type=fmt)
     response['Content-Disposition'] = 'attachment; filename=mymodel.xlsx'
-    wb = openpyxl.Workbook()
-    ws = wb.get_active_sheet()
+    wb = Workbook()
+    ws = wb.active
     ws.title = "List Geo"
 
     row_num = 0
@@ -140,6 +145,7 @@ class OVCCaseGeoAdmin(admin.ModelAdmin):
 
     def get_creator(self, obj):
         return obj.case_id.created_by
+
     get_creator.short_description = 'Creator'
     get_creator.admin_order_field = 'case_id__created_by'
     actions = [dump_to_csv, export_xls, export_xlsx]
@@ -161,6 +167,7 @@ class OVCCaseCategoryAdmin(admin.ModelAdmin):
 
     def get_creator(self, obj):
         return obj.case_id.created_by
+
     get_creator.short_description = 'Creator'
     get_creator.admin_order_field = 'case_id__created_by'
     actions = [dump_to_csv]
@@ -172,7 +179,7 @@ admin.site.register(OVCCaseCategory, OVCCaseCategoryAdmin)
 class PersonInline(admin.StackedInline):
     model = OVCBasicPerson
 
-    def has_add_permission(self, request):
+    def has_add_permission(self, request, obj=None):
         return False
 
     def has_delete_permission(self, request, obj=None):
@@ -189,7 +196,7 @@ class PersonInline(admin.StackedInline):
 class CategoryInline(admin.StackedInline):
     model = OVCBasicCategory
 
-    def has_add_permission(self, request):
+    def has_add_permission(self, request, obj=None):
         return False
 
     def has_delete_permission(self, request, obj=None):
@@ -210,7 +217,7 @@ class OVCBasicCRSAdmin(admin.ModelAdmin):
 
     list_filter = ['is_void', 'timestamp_created']
 
-    inlines = (PersonInline, CategoryInline, )
+    inlines = (PersonInline, CategoryInline,)
     actions = [dump_to_csv]
 
 
@@ -222,7 +229,7 @@ class OVCDischargeInline(admin.StackedInline):
 
     readonly_fields = ['person']
 
-    def has_add_permission(self, request):
+    def has_add_permission(self, request, obj=None):
         return False
 
     def has_delete_permission(self, request, obj=None):
@@ -250,12 +257,13 @@ class OVCPlacementSAdmin(admin.ModelAdmin):
     readonly_fields = ['org_unit', 'person', 'residential_institution',
                        'case_record']
 
-    inlines = (OVCDischargeInline, )
+    inlines = (OVCDischargeInline,)
 
     actions = [dump_to_csv]
 
     def person_id_display(self, obj):
         return obj.person_id
+
     person_id_display.short_description = 'Person ID'
 
     def get_actions(self, request):
@@ -272,7 +280,7 @@ class OVCCaseCategoryInline(admin.StackedInline):
     model = OVCCaseCategory
     readonly_fields = ['person']
 
-    def has_add_permission(self, request):
+    def has_add_permission(self, request, obj=None):
         return False
 
     def has_delete_permission(self, request, obj=None):
@@ -289,7 +297,7 @@ class OVCCaseGeoInline(admin.StackedInline):
     model = OVCCaseGeo
     readonly_fields = ['person']
 
-    def has_add_permission(self, request):
+    def has_add_permission(self, request, obj=None):
         return False
 
     def has_delete_permission(self, request, obj=None):
@@ -306,7 +314,7 @@ class OVCCaseEventsInline(admin.StackedInline):
     model = OVCCaseEvents
     readonly_fields = ['placement_id', 'app_user']
 
-    def has_add_permission(self, request):
+    def has_add_permission(self, request, obj=None):
         return False
 
     def has_delete_permission(self, request, obj=None):
@@ -331,12 +339,13 @@ class OVCCaseRecordAdmin(admin.ModelAdmin):
 
     readonly_fields = ['person']
 
-    inlines = (OVCCaseCategoryInline, OVCCaseGeoInline, OVCCaseEventsInline, )
+    inlines = (OVCCaseCategoryInline, OVCCaseGeoInline, OVCCaseEventsInline,)
 
     actions = [dump_to_csv]
 
     def person_id_display(self, obj):
         return obj.person_id
+
     person_id_display.short_description = 'Person ID'
 
     def get_actions(self, request):
@@ -390,6 +399,7 @@ class OVCCaseLocationAdmin(admin.ModelAdmin):
 
 admin.site.register(OVCCaseLocation, OVCCaseLocationAdmin)
 '''
+
 
 class OVCCaseInformationAdmin(admin.ModelAdmin):
     """Admin back end for Geo data management."""
